@@ -163,7 +163,7 @@ class _HomePageState extends State<HomePage> {
     try {
       // Get API key from environment or dotenv
       String? apiKey = const String.fromEnvironment('OPENAI_API_KEY');
-      print('DEBUG: Checking environment API key...'); // Added log
+      print('DEBUG: Checking environment API key..'); // Added log
       print(
           'DEBUG: API key from env: ${apiKey.isEmpty ? 'EMPTY' : 'EXISTS'}'); // Added log
 
