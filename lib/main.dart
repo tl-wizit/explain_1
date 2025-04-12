@@ -12,6 +12,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
+  print(
+      'DEBUG: App starting... Check console at chrome://inspect'); // Added log
   await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
 
