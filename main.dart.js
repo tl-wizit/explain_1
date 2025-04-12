@@ -39146,8 +39146,8 @@ a1s(a0,a1){var s=0,r=A.M(t.N),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g,f,e,d,c,b,a
 var $async$qh=A.I(function(a2,a3){if(a2===1){o.push(a3)
 s=p}while(true)switch(s){case 0:m.ap(new A.agN(m))
 p=3
-l="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"
-A.eR("DEBUG: Checking environment API key...")
+l="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"
+A.eR("DEBUG: Checking environment API key..")
 A.eR("DEBUG: API key from env: "+(J.c3(l)===0?"EMPTY":"EXISTS"))
 if(J.c3(l)===0){A.eR("DEBUG: Falling back to dotenv...")
 d=$.aqp()
