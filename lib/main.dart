@@ -20,9 +20,13 @@ void main() async {
   
   CameraDescription? firstCamera;
   if (!kIsWeb) {
-    final cameras = await availableCameras();
-    if (cameras.isNotEmpty) {
-      firstCamera = cameras.first;
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        firstCamera = cameras.first;
+      }
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
     }
   }
 
@@ -104,23 +108,45 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _takePicture() async {
     try {
-      await _initializeControllerFuture;
-      final image = await _controller?.takePicture();
-      if (image != null) {
-        final explanation = await _getExplanation(image.path);
-
-        setState(() {
-          _imageHistory.add({
-            'path': image.path,
-            'timestamp': DateTime.now().toString().split('.')[0], // Remove milliseconds
-            'explanation': explanation,
+      if (kIsWeb) {
+        final picker = ImagePicker();
+        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+        
+        if (image != null) {
+          final bytes = await image.readAsBytes();
+          final explanation = await _getExplanation('web_image', fileBytes: bytes);
+          final timestamp = DateTime.now().toString().split('.')[0];
+          
+          setState(() {
+            _webImageBytes[timestamp] = bytes;
+            _imageHistory.add({
+              'path': timestamp,
+              'timestamp': timestamp,
+              'explanation': explanation,
+            });
           });
-        });
+          
+          _saveHistory();
+        }
+      } else {
+        await _initializeControllerFuture;
+        final image = await _controller?.takePicture();
+        if (image != null) {
+          final explanation = await _getExplanation(image.path);
 
-        _saveHistory();
+          setState(() {
+            _imageHistory.add({
+              'path': image.path,
+              'timestamp': DateTime.now().toString().split('.')[0], // Remove milliseconds
+              'explanation': explanation,
+            });
+          });
+
+          _saveHistory();
+        }
       }
     } catch (e) {
-      print(e);
+      debugPrint('Error taking picture: $e');
     }
   }
 
@@ -289,16 +315,10 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   child: AspectRatio(
                                     aspectRatio: 16 / 9,
-                                    child: kIsWeb
+                                    child: kIsWeb && _webImageBytes.containsKey(item['path'])
                                         ? Image.memory(
-                                            _webImageBytes[item['path']] ?? Uint8List(0),
+                                            _webImageBytes[item['path']]!,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              log('Error loading image: $error');
-                                              return const Center(
-                                                child: Icon(Icons.error_outline, size: 48, color: Colors.red),
-                                              );
-                                            },
                                           )
                                         : Image.file(
                                             File(item['path']!),
