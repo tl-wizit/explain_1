@@ -95,7 +95,8 @@ class _HomePageState extends State<HomePage> {
         _imageHistory = List<Map<String, String>>.from(
             (json.decode(history) as List)
                 .map((item) => Map<String, String>.from(item as Map)));
-        _imageHistory.sort((a, b) => b['timestamp']!.compareTo(a['timestamp']!));
+        _imageHistory
+            .sort((a, b) => b['timestamp']!.compareTo(a['timestamp']!));
       });
 
       // Load images from SharedPreferences
@@ -117,7 +118,7 @@ class _HomePageState extends State<HomePage> {
   Future<String> _saveImageToStorage(String sourcePath, Uint8List bytes) async {
     final prefs = await SharedPreferences.getInstance();
     final timestamp = DateTime.now().toString();
-    
+
     if (kIsWeb) {
       await prefs.setString('image_$timestamp', base64Encode(bytes));
       _imageCache[timestamp] = bytes;
@@ -126,7 +127,7 @@ class _HomePageState extends State<HomePage> {
       final directory = await getApplicationDocumentsDirectory();
       final fileName = 'image_$timestamp${path.extension(sourcePath)}';
       final destinationPath = path.join(directory.path, fileName);
-      
+
       await File(destinationPath).writeAsBytes(bytes);
       // Also cache in SharedPreferences for persistence
       await prefs.setString('image_$destinationPath', base64Encode(bytes));
@@ -139,12 +140,14 @@ class _HomePageState extends State<HomePage> {
     try {
       if (kIsWeb) {
         final picker = ImagePicker();
-        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+        final XFile? image =
+            await picker.pickImage(source: ImageSource.gallery);
 
         if (image != null) {
           final bytes = await image.readAsBytes();
           final storagePath = await _saveImageToStorage(image.path, bytes);
-          final explanation = await _getExplanation('web_image', fileBytes: bytes);
+          final explanation =
+              await _getExplanation('web_image', fileBytes: bytes);
 
           setState(() {
             _imageHistory.add({
@@ -157,22 +160,38 @@ class _HomePageState extends State<HomePage> {
           _saveHistory();
         }
       } else {
-        await _initializeControllerFuture;
-        final image = await _controller?.takePicture();
-        if (image != null) {
-          final bytes = await image.readAsBytes();
-          final storagePath = await _saveImageToStorage(image.path, bytes);
-          final explanation = await _getExplanation(storagePath, fileBytes: bytes);
+        // Ensure controller is initialized
+        if (_controller == null || !_controller!.value.isInitialized) {
+          debugPrint('Reinitializing camera controller');
+          if (widget.camera != null) {
+            _controller = CameraController(
+              widget.camera!,
+              ResolutionPreset.high,
+            );
+            _initializeControllerFuture = _controller?.initialize();
+          }
+        }
 
-          setState(() {
-            _imageHistory.add({
-              'path': storagePath,
-              'timestamp': DateTime.now().toString().split('.')[0],
-              'explanation': explanation,
+        // Wait for controller initialization
+        if (_initializeControllerFuture != null) {
+          await _initializeControllerFuture;
+          final image = await _controller?.takePicture();
+          if (image != null) {
+            final bytes = await image.readAsBytes();
+            final storagePath = await _saveImageToStorage(image.path, bytes);
+            final explanation =
+                await _getExplanation(storagePath, fileBytes: bytes);
+
+            setState(() {
+              _imageHistory.add({
+                'path': storagePath,
+                'timestamp': DateTime.now().toString().split('.')[0],
+                'explanation': explanation,
+              });
             });
-          });
 
-          _saveHistory();
+            _saveHistory();
+          }
         }
       }
     } catch (e) {
@@ -183,10 +202,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> _deleteImage(int index) async {
     final item = _imageHistory[index];
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Remove from SharedPreferences
     await prefs.remove('image_${item['path']}');
-    
+
     if (!kIsWeb) {
       // Remove physical file on mobile
       final file = File(item['path']!);
@@ -486,7 +505,8 @@ class _HomePageState extends State<HomePage> {
                                   final storagePath = await _saveImageToStorage(
                                       'web_image.jpg', bytes);
                                   final explanation = await _getExplanation(
-                                      storagePath, fileBytes: bytes);
+                                      storagePath,
+                                      fileBytes: bytes);
 
                                   setState(() {
                                     _imageCache[storagePath] = bytes;
@@ -511,32 +531,45 @@ class _HomePageState extends State<HomePage> {
                                       children: <Widget>[
                                         ListTile(
                                           leading: const Icon(Icons.camera_alt),
-                                          title: const Text('Prendre une photo'),
+                                          title:
+                                              const Text('Prendre une photo'),
                                           onTap: () async {
                                             Navigator.pop(context);
                                             await _takePicture();
                                           },
                                         ),
                                         ListTile(
-                                          leading: const Icon(Icons.photo_library),
-                                          title: const Text('Choisir une image'),
+                                          leading:
+                                              const Icon(Icons.photo_library),
+                                          title:
+                                              const Text('Choisir une image'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            final result = await FilePicker.platform
-                                                .pickFiles(type: FileType.image);
-                                            if (result?.files.single.path != null) {
-                                              final filePath = result!.files.single.path!;
-                                              final bytes = await File(filePath).readAsBytes();
-                                              final storagePath = await _saveImageToStorage(
-                                                  filePath, bytes);
-                                              final explanation = await _getExplanation(
-                                                  storagePath, fileBytes: bytes);
+                                            final result = await FilePicker
+                                                .platform
+                                                .pickFiles(
+                                                    type: FileType.image);
+                                            if (result?.files.single.path !=
+                                                null) {
+                                              final filePath =
+                                                  result!.files.single.path!;
+                                              final bytes = await File(filePath)
+                                                  .readAsBytes();
+                                              final storagePath =
+                                                  await _saveImageToStorage(
+                                                      filePath, bytes);
+                                              final explanation =
+                                                  await _getExplanation(
+                                                      storagePath,
+                                                      fileBytes: bytes);
 
                                               setState(() {
-                                                _imageCache[storagePath] = bytes;
+                                                _imageCache[storagePath] =
+                                                    bytes;
                                                 _imageHistory.add({
                                                   'path': storagePath,
-                                                  'timestamp': DateTime.now().toString(),
+                                                  'timestamp':
+                                                      DateTime.now().toString(),
                                                   'explanation': explanation,
                                                 });
                                               });
