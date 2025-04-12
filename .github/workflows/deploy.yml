@@ -32,6 +32,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
         
+      - name: Setup Environment
+        run: cp .env.example .env
+        
       - name: Build web
         run: flutter build web --base-href "/explain_1/"
         

@@ -3,21 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'dart:developer';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   CameraDescription? firstCamera;
   if (!kIsWeb) {
     try {
@@ -70,7 +67,7 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, String>> _imageHistory = [];
   bool _isAnalyzing = false;
   bool _isSpeaking = false;
-  Map<String, Uint8List> _webImageBytes = {};
+  final Map<String, Uint8List> _webImageBytes = {};
 
   @override
   void initState() {
@@ -91,10 +88,11 @@ class _HomePageState extends State<HomePage> {
     if (history != null) {
       setState(() {
         _imageHistory = List<Map<String, String>>.from(
-          (json.decode(history) as List).map((item) => Map<String, String>.from(item as Map))
-        );
+            (json.decode(history) as List)
+                .map((item) => Map<String, String>.from(item as Map)));
         // Sort by timestamp, most recent first
-        _imageHistory.sort((a, b) => b['timestamp']!.compareTo(a['timestamp']!));
+        _imageHistory
+            .sort((a, b) => b['timestamp']!.compareTo(a['timestamp']!));
       });
     }
   }
@@ -110,13 +108,15 @@ class _HomePageState extends State<HomePage> {
     try {
       if (kIsWeb) {
         final picker = ImagePicker();
-        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-        
+        final XFile? image =
+            await picker.pickImage(source: ImageSource.gallery);
+
         if (image != null) {
           final bytes = await image.readAsBytes();
-          final explanation = await _getExplanation('web_image', fileBytes: bytes);
+          final explanation =
+              await _getExplanation('web_image', fileBytes: bytes);
           final timestamp = DateTime.now().toString().split('.')[0];
-          
+
           setState(() {
             _webImageBytes[timestamp] = bytes;
             _imageHistory.add({
@@ -125,7 +125,7 @@ class _HomePageState extends State<HomePage> {
               'explanation': explanation,
             });
           });
-          
+
           _saveHistory();
         }
       } else {
@@ -137,7 +137,9 @@ class _HomePageState extends State<HomePage> {
           setState(() {
             _imageHistory.add({
               'path': image.path,
-              'timestamp': DateTime.now().toString().split('.')[0], // Remove milliseconds
+              'timestamp': DateTime.now()
+                  .toString()
+                  .split('.')[0], // Remove milliseconds
               'explanation': explanation,
             });
           });
@@ -150,7 +152,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<String> _getExplanation(String imagePath, {Uint8List? fileBytes}) async {
+  Future<String> _getExplanation(String imagePath,
+      {Uint8List? fileBytes}) async {
     setState(() {
       _isAnalyzing = true;
     });
@@ -171,20 +174,20 @@ class _HomePageState extends State<HomePage> {
         'messages': [
           {
             'role': 'system',
-            'content': 'You are an assistant that explains images in French for 10-year-old children.'
+            'content':
+                'You are an assistant that explains images in French for 10-year-old children.'
           },
           {
             'role': 'user',
             'content': [
               {
                 'type': 'text',
-                'text': 'Explique cette image comme si tu parlais à un enfant de 10 ans.'
+                'text':
+                    'Explique cette image comme si tu parlais à un enfant de 10 ans.'
               },
               {
                 'type': 'image_url',
-                'image_url': {
-                  'url': 'data:image/jpeg;base64,$base64Image'
-                }
+                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}
               }
             ]
           }
@@ -259,7 +262,7 @@ class _HomePageState extends State<HomePage> {
     });
     await _flutterTts.setLanguage('fr-FR');
     await _flutterTts.speak(text);
-    
+
     _flutterTts.setCompletionHandler(() {
       setState(() {
         _isSpeaking = false;
@@ -315,7 +318,9 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   child: AspectRatio(
                                     aspectRatio: 16 / 9,
-                                    child: kIsWeb && _webImageBytes.containsKey(item['path'])
+                                    child: kIsWeb &&
+                                            _webImageBytes
+                                                .containsKey(item['path'])
                                         ? Image.memory(
                                             _webImageBytes[item['path']]!,
                                             fit: BoxFit.cover,
@@ -329,11 +334,13 @@ class _HomePageState extends State<HomePage> {
                                 Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item['timestamp']!,
-                                        style: theme.textTheme.bodySmall?.copyWith(
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
                                           color: theme.colorScheme.secondary,
                                         ),
                                       ),
@@ -345,14 +352,17 @@ class _HomePageState extends State<HomePage> {
                                     ],
                                   ),
                                 ),
-                                ButtonBar(
+                                OverflowBar(
                                   children: [
                                     IconButton(
                                       icon: Icon(
-                                        _isSpeaking ? Icons.stop : Icons.volume_up,
+                                        _isSpeaking
+                                            ? Icons.stop
+                                            : Icons.volume_up,
                                         color: theme.colorScheme.primary,
                                       ),
-                                      onPressed: () => _speak(item['explanation']!),
+                                      onPressed: () =>
+                                          _speak(item['explanation']!),
                                     ),
                                     IconButton(
                                       icon: Icon(
@@ -377,14 +387,17 @@ class _HomePageState extends State<HomePage> {
                         ? null
                         : () async {
                             log('Take photo button pressed');
-                            final result = await FilePicker.platform.pickFiles(type: FileType.image);
+                            final result = await FilePicker.platform
+                                .pickFiles(type: FileType.image);
                             if (result != null) {
                               if (kIsWeb) {
                                 // Handle web platform
                                 final bytes = result.files.single.bytes;
                                 if (bytes != null) {
                                   log('File selected on web');
-                                  final explanation = await _getExplanation('dummy_path', fileBytes: bytes);
+                                  final explanation = await _getExplanation(
+                                      'dummy_path',
+                                      fileBytes: bytes);
                                   log('Explanation received: $explanation');
 
                                   final timestamp = DateTime.now().toString();
@@ -405,7 +418,8 @@ class _HomePageState extends State<HomePage> {
                                 final filePath = result.files.single.path;
                                 if (filePath != null) {
                                   log('File selected: $filePath');
-                                  final explanation = await _getExplanation(filePath);
+                                  final explanation =
+                                      await _getExplanation(filePath);
                                   log('Explanation received: $explanation');
 
                                   setState(() {
