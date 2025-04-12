@@ -161,13 +161,19 @@ class _HomePageState extends State<HomePage> {
     try {
       // Get API key from environment or dotenv
       String? apiKey = const String.fromEnvironment('OPENAI_API_KEY');
+      debugPrint('Environment API key empty? ${apiKey.isEmpty}');
+
       if (apiKey.isEmpty) {
         apiKey = dotenv.env['OPENAI_API_KEY'];
+        debugPrint('Fallback to dotenv API key empty? ${apiKey?.isEmpty}');
       }
 
       if (apiKey == null || apiKey.isEmpty) {
         throw Exception('OpenAI API key not found');
       }
+
+      // Add this line to check the first few characters of the key (safely)
+      debugPrint('Using API key starting with: ${apiKey.substring(0, 7)}...');
 
       final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
