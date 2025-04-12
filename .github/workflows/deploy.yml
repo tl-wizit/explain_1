@@ -30,10 +30,11 @@ jobs:
         run: flutter pub get
         
       - name: Setup Environment
-        run: cp .env.example .env
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
       - name: Build web
-        run: flutter build web --base-href "/explain_1/"
+        run: flutter build web --base-href "/explain_1/" --dart-define=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3

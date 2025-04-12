@@ -159,7 +159,16 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
+      // Get API key from environment or dotenv
+      String? apiKey = const String.fromEnvironment('OPENAI_API_KEY');
+      if (apiKey.isEmpty) {
+        apiKey = dotenv.env['OPENAI_API_KEY'];
+      }
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw Exception('OpenAI API key not found');
+      }
+
       final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
       // Get the image bytes
