@@ -34,10 +34,17 @@ jobs:
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
       - name: Build web
-        run: flutter build web --base-href "/explain_1/" --dart-define=OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        run: flutter build web --base-href "/explain_1/"
+
+      # Add these new steps for GitHub Pages deployment
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
         
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
+          path: 'build/web'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
