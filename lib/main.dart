@@ -10,6 +10,7 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'settings_page.dart';
 
 void main() async {
   print(
@@ -161,26 +162,34 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      // Get API key from environment or dotenv
-      String? apiKey = const String.fromEnvironment('OPENAI_API_KEY');
-      print('DEBUG: Checking environment API key..'); // Added log
-      print(
-          'DEBUG: API key from env: ${apiKey.isEmpty ? 'EMPTY' : 'EXISTS'}'); // Added log
-
-      if (apiKey.isEmpty) {
-        print('DEBUG: Falling back to dotenv...'); // Added log
-        apiKey = dotenv.env['OPENAI_API_KEY'];
-        print(
-            'DEBUG: API key from dotenv: ${apiKey?.isEmpty ?? true ? 'EMPTY' : 'EXISTS'}'); // Added log
-      }
+      // Get API key from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('openai_api_key');
 
       if (apiKey == null || apiKey.isEmpty) {
-        print('DEBUG: No API key found in any source!'); // Added log
-        throw Exception('OpenAI API key not found');
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Clé API manquante'),
+              content: const Text('Veuillez configurer votre clé API OpenAI dans les paramètres.'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsPage()),
+                    );
+                  },
+                  child: const Text('Aller aux paramètres'),
+                ),
+              ],
+            );
+          },
+        );
+        throw Exception('OpenAI API key not configured');
       }
-
-      print(
-          'DEBUG: Final API key starts with: ${apiKey.substring(0, 5)}...'); // Added log
 
       final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
@@ -307,6 +316,17 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Explain App'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
