@@ -172,14 +172,16 @@ class _HomePageState extends State<HomePage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Clé API manquante'),
-              content: const Text('Veuillez configurer votre clé API OpenAI dans les paramètres.'),
+              content: const Text(
+                  'Veuillez configurer votre clé API OpenAI dans les paramètres.'),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SettingsPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const SettingsPage()),
                     );
                   },
                   child: const Text('Aller aux paramètres'),
@@ -313,7 +315,7 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Explain App'),
+        title: Text('Explain App [${DateTime.now().toString().split('.')[0]}]'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
