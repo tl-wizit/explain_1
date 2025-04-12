@@ -430,12 +430,11 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _isAnalyzing
                         ? null
                         : () async {
-                            log('Take photo button pressed');
-                            final result = await FilePicker.platform
-                                .pickFiles(type: FileType.image);
-                            if (result != null) {
-                              if (kIsWeb) {
-                                // Handle web platform
+                            if (kIsWeb) {
+                              // Web platform - use FilePicker
+                              final result = await FilePicker.platform
+                                  .pickFiles(type: FileType.image);
+                              if (result != null) {
                                 final bytes = result.files.single.bytes;
                                 if (bytes != null) {
                                   log('File selected on web');
@@ -457,29 +456,55 @@ class _HomePageState extends State<HomePage> {
                                   log('Image history updated');
                                   _saveHistory();
                                 }
-                              } else {
-                                // Handle native platforms
-                                final filePath = result.files.single.path;
-                                if (filePath != null) {
-                                  log('File selected: $filePath');
-                                  final explanation =
-                                      await _getExplanation(filePath);
-                                  log('Explanation received: $explanation');
-
-                                  setState(() {
-                                    _imageHistory.add({
-                                      'path': filePath,
-                                      'timestamp': DateTime.now().toString(),
-                                      'explanation': explanation,
-                                    });
-                                  });
-
-                                  log('Image history updated');
-                                  _saveHistory();
-                                }
                               }
                             } else {
-                              log('No file selected');
+                              // Mobile platform - show options
+                              showModalBottomSheet(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return SafeArea(
+                                    child: Wrap(
+                                      children: <Widget>[
+                                        ListTile(
+                                          leading: const Icon(Icons.camera_alt),
+                                          title: const Text('Prendre une photo'),
+                                          onTap: () async {
+                                            Navigator.pop(context);
+                                            await _takePicture();
+                                          },
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.photo_library),
+                                          title: const Text('Choisir une image'),
+                                          onTap: () async {
+                                            Navigator.pop(context);
+                                            final result = await FilePicker.platform
+                                                .pickFiles(type: FileType.image);
+                                            if (result?.files.single.path != null) {
+                                              final filePath = result!.files.single.path!;
+                                              log('File selected: $filePath');
+                                              final explanation =
+                                                  await _getExplanation(filePath);
+                                              log('Explanation received: $explanation');
+
+                                              setState(() {
+                                                _imageHistory.add({
+                                                  'path': filePath,
+                                                  'timestamp': DateTime.now().toString(),
+                                                  'explanation': explanation,
+                                                });
+                                              });
+
+                                              log('Image history updated');
+                                              _saveHistory();
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
                             }
                           },
                     style: ElevatedButton.styleFrom(
