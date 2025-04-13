@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Explain App',
+      title: 'Explique-moi... ',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.red.shade400,
@@ -379,20 +379,31 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _handleImageSelection({bool fromCamera = false}) async {
     try {
+      debugPrint('Starting image selection, fromCamera: $fromCamera');
       setState(() {
         _isAnalyzing = true;
       });
 
       final XFile? image = await _imagePicker?.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 80, // Reduce image size
+        maxWidth: 1920, // Limit max dimensions
+        maxHeight: 1080,
       );
 
       if (image != null) {
-        debugPrint('Image selected, reading bytes');
+        debugPrint('Image selected: ${image.path}');
         final bytes = await image.readAsBytes();
+        debugPrint('Image bytes read, size: ${bytes.length}');
+
         final storagePath = await _saveImageToStorage(image.path, bytes);
+        debugPrint('Image saved to storage: $storagePath');
+
         final explanation =
             await _getExplanation(storagePath, fileBytes: bytes);
+        debugPrint('Got explanation');
+
+        if (!mounted) return; // Check if widget is still mounted
 
         setState(() {
           _imageCache[storagePath] = bytes;
@@ -404,6 +415,7 @@ class _HomePageState extends State<HomePage> {
         });
 
         await _saveHistory();
+        debugPrint('History saved');
       } else {
         debugPrint('No image selected');
       }
@@ -411,15 +423,11 @@ class _HomePageState extends State<HomePage> {
       debugPrint('Error handling image selection: $e');
       debugPrint('Stack trace: $stackTrace');
     } finally {
-      setState(() {
-        _isAnalyzing = false;
-      });
-
-      // Force garbage collection to help clear cached files
-      if (kIsWeb) {
-        debugPrint('Forcing JS garbage collection');
-        // ignore: undefined_prefixed_name
-        js.context.callMethod('eval', ['collectGarbage();']);
+      if (mounted) {
+        // Check if widget is still mounted
+        setState(() {
+          _isAnalyzing = false;
+        });
       }
     }
   }
@@ -554,25 +562,27 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _isAnalyzing
                         ? null
                         : () async {
-                            debugPrint(
-                                'Button pressed, analyzing: $_isAnalyzing');
+                            debugPrint('Camera button pressed');
                             if (kIsWeb) {
+                              debugPrint('Web platform - using gallery');
                               await _handleImageSelection();
                             } else {
-                              // Mobile platform - show options
-                              showModalBottomSheet(
+                              debugPrint('Mobile platform - showing options');
+                              if (!mounted) return;
+                              showModalBottomSheet<void>(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return SafeArea(
-                                    child: Wrap(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
                                         ListTile(
                                           leading: const Icon(Icons.camera_alt),
                                           title:
                                               const Text('Prendre une photo'),
-                                          onTap: () async {
+                                          onTap: () {
                                             Navigator.pop(context);
-                                            await _handleImageSelection(
+                                            _handleImageSelection(
                                                 fromCamera: true);
                                           },
                                         ),
@@ -581,9 +591,9 @@ class _HomePageState extends State<HomePage> {
                                               const Icon(Icons.photo_library),
                                           title:
                                               const Text('Choisir une image'),
-                                          onTap: () async {
+                                          onTap: () {
                                             Navigator.pop(context);
-                                            await _handleImageSelection();
+                                            _handleImageSelection();
                                           },
                                         ),
                                       ],

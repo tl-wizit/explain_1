@@ -21,10 +21,14 @@ async function updateVersion() {
         // Generate new version file content
         const versionContent = `// This file is auto-generated. Do not edit manually.
 class Version {
-    static const String number = '1.0.0';
-    static const int build = ${currentBuild};
+  static const String number = '1.0.0';
+  static const int build = ${currentBuild};
 }
 `;
+
+        // Create lib directory if it doesn't exist
+        const libDir = path.join(__dirname, '../lib');
+        await fs.mkdir(libDir, { recursive: true });
 
         // Write the new version file
         await fs.writeFile(versionFile, versionContent, 'utf8');
