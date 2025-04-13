@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:js/js.dart' if (dart.library.html) 'dart:js' as js;
 import 'settings_page.dart';
 
 void main() async {
@@ -73,10 +74,12 @@ class _HomePageState extends State<HomePage> {
   bool _isAnalyzing = false;
   bool _isSpeaking = false;
   final Map<String, Uint8List> _imageCache = {};
+  ImagePicker? _imagePicker;
 
   @override
   void initState() {
     super.initState();
+    _imagePicker = ImagePicker();
     if (widget.camera != null) {
       _controller = CameraController(
         widget.camera!,
@@ -373,6 +376,53 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _handleImageSelection({bool fromCamera = false}) async {
+    try {
+      setState(() {
+        _isAnalyzing = true;
+      });
+
+      final XFile? image = await _imagePicker?.pickImage(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      );
+
+      if (image != null) {
+        debugPrint('Image selected, reading bytes');
+        final bytes = await image.readAsBytes();
+        final storagePath = await _saveImageToStorage(image.path, bytes);
+        final explanation =
+            await _getExplanation(storagePath, fileBytes: bytes);
+
+        setState(() {
+          _imageCache[storagePath] = bytes;
+          _imageHistory.add({
+            'path': storagePath,
+            'timestamp': DateTime.now().toString().split('.')[0],
+            'explanation': explanation,
+          });
+        });
+
+        await _saveHistory();
+      } else {
+        debugPrint('No image selected');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error handling image selection: $e');
+      debugPrint('Stack trace: $stackTrace');
+    } finally {
+      setState(() {
+        _isAnalyzing = false;
+      });
+
+      // Force garbage collection to help clear cached files
+      if (kIsWeb) {
+        debugPrint('Forcing JS garbage collection');
+        // ignore: undefined_prefixed_name
+        js.context.callMethod('eval', ['collectGarbage();']);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -506,51 +556,7 @@ class _HomePageState extends State<HomePage> {
                             debugPrint(
                                 'Button pressed, analyzing: $_isAnalyzing');
                             if (kIsWeb) {
-                              try {
-                                setState(() {
-                                  _isAnalyzing =
-                                      true; // Set analyzing state before picking
-                                });
-
-                                final result =
-                                    await FilePicker.platform.pickFiles(
-                                  type: FileType.image,
-                                  withData: true, // Ensure we get the file data
-                                );
-
-                                if (result != null &&
-                                    result.files.single.bytes != null) {
-                                  debugPrint('File selected on web with bytes');
-                                  final bytes = result.files.single.bytes!;
-                                  final storagePath = await _saveImageToStorage(
-                                      'web_image.jpg', bytes);
-                                  final explanation = await _getExplanation(
-                                      storagePath,
-                                      fileBytes: bytes);
-
-                                  setState(() {
-                                    _imageCache[storagePath] = bytes;
-                                    _imageHistory.add({
-                                      'path': storagePath,
-                                      'timestamp': DateTime.now().toString(),
-                                      'explanation': explanation,
-                                    });
-                                  });
-
-                                  debugPrint('Image history updated');
-                                  await _saveHistory();
-                                } else {
-                                  debugPrint(
-                                      'No file selected or no bytes available');
-                                }
-                              } catch (e, stackTrace) {
-                                debugPrint('Error handling file pick: $e');
-                                debugPrint('Stack trace: $stackTrace');
-                              } finally {
-                                setState(() {
-                                  _isAnalyzing = false; // Reset analyzing state
-                                });
-                              }
+                              await _handleImageSelection();
                             } else {
                               // Mobile platform - show options
                               showModalBottomSheet(
@@ -565,7 +571,8 @@ class _HomePageState extends State<HomePage> {
                                               const Text('Prendre une photo'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            await _takePicture();
+                                            await _handleImageSelection(
+                                                fromCamera: true);
                                           },
                                         ),
                                         ListTile(
@@ -575,38 +582,7 @@ class _HomePageState extends State<HomePage> {
                                               const Text('Choisir une image'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            final result = await FilePicker
-                                                .platform
-                                                .pickFiles(
-                                                    type: FileType.image);
-                                            if (result?.files.single.path !=
-                                                null) {
-                                              final filePath =
-                                                  result!.files.single.path!;
-                                              final bytes = await File(filePath)
-                                                  .readAsBytes();
-                                              final storagePath =
-                                                  await _saveImageToStorage(
-                                                      filePath, bytes);
-                                              final explanation =
-                                                  await _getExplanation(
-                                                      storagePath,
-                                                      fileBytes: bytes);
-
-                                              setState(() {
-                                                _imageCache[storagePath] =
-                                                    bytes;
-                                                _imageHistory.add({
-                                                  'path': storagePath,
-                                                  'timestamp':
-                                                      DateTime.now().toString(),
-                                                  'explanation': explanation,
-                                                });
-                                              });
-
-                                              log('Image history updated');
-                                              _saveHistory();
-                                            }
+                                            await _handleImageSelection();
                                           },
                                         ),
                                       ],
