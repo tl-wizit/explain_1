@@ -11,15 +11,11 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:js/js.dart' if (dart.library.html) 'dart:js' as js;
 import 'settings_page.dart';
 import 'version.dart';
 
 void main() async {
-  print(
-      'DEBUG: App starting... Check console at chrome://inspect'); // Added log
-  await dotenv.load(fileName: ".env");
+  print('DEBUG: App starting... Check console at chrome://inspect');
   WidgetsFlutterBinding.ensureInitialized();
 
   CameraDescription? firstCamera;
