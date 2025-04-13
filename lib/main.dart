@@ -274,17 +274,20 @@ class _HomePageState extends State<HomePage> {
   Future<void> _speak(String text) async {
     if (_isSpeaking) {
       if (_isPaused) {
-        // Resume
+        // Resume by starting over from where we left off
         setState(() {
           _isPaused = false;
         });
-        await _flutterTts.resume();
+        final words = _currentText.split(' ');
+        final spokenWords = text.split(' ');
+        final remainingText = spokenWords.skip(words.length).join(' ');
+        await _flutterTts.speak(remainingText);
       } else {
-        // Pause
+        // Pause by stopping
         setState(() {
           _isPaused = true;
         });
-        await _flutterTts.pause();
+        await _flutterTts.stop();
       }
       return;
     }
