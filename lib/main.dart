@@ -5,7 +5,6 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:file_picker/file_picker.dart';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,27 +63,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  CameraController? _controller;
-  Future<void>? _initializeControllerFuture;
   final FlutterTts _flutterTts = FlutterTts();
   List<Map<String, String>> _imageHistory = [];
   bool _isAnalyzing = false;
   bool _isSpeaking = false;
   final Map<String, Uint8List> _imageCache = {};
-  ImagePicker? _imagePicker;
+  final ImagePicker _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _imagePicker = ImagePicker();
-    if (widget.camera != null) {
-      _controller = CameraController(
-        widget.camera!,
-        ResolutionPreset.high,
-      );
-      _initializeControllerFuture = _controller?.initialize();
-    }
     _loadHistory();
   }
 
@@ -134,78 +123,6 @@ class _HomePageState extends State<HomePage> {
       await prefs.setString('image_$destinationPath', base64Encode(bytes));
       _imageCache[destinationPath] = bytes;
       return destinationPath;
-    }
-  }
-
-  Future<void> _takePicture() async {
-    try {
-      debugPrint('Taking picture, is web: $kIsWeb');
-      if (kIsWeb) {
-        final picker = ImagePicker();
-        debugPrint('Opening image picker on web');
-        final XFile? image =
-            await picker.pickImage(source: ImageSource.gallery);
-
-        if (image != null) {
-          debugPrint('Image selected, reading bytes');
-          final bytes = await image.readAsBytes();
-          debugPrint('Bytes read, saving to storage');
-          final storagePath = await _saveImageToStorage(image.path, bytes);
-          debugPrint('Getting explanation');
-          final explanation =
-              await _getExplanation('web_image', fileBytes: bytes);
-          debugPrint('Explanation received');
-
-          setState(() {
-            _imageHistory.add({
-              'path': storagePath,
-              'timestamp': DateTime.now().toString().split('.')[0],
-              'explanation': explanation,
-            });
-          });
-
-          _saveHistory();
-        } else {
-          debugPrint('No image selected');
-        }
-      } else {
-        // Ensure controller is initialized
-        if (_controller == null || !_controller!.value.isInitialized) {
-          debugPrint('Reinitializing camera controller');
-          if (widget.camera != null) {
-            _controller = CameraController(
-              widget.camera!,
-              ResolutionPreset.high,
-            );
-            _initializeControllerFuture = _controller?.initialize();
-          }
-        }
-
-        // Wait for controller initialization
-        if (_initializeControllerFuture != null) {
-          await _initializeControllerFuture;
-          final image = await _controller?.takePicture();
-          if (image != null) {
-            final bytes = await image.readAsBytes();
-            final storagePath = await _saveImageToStorage(image.path, bytes);
-            final explanation =
-                await _getExplanation(storagePath, fileBytes: bytes);
-
-            setState(() {
-              _imageHistory.add({
-                'path': storagePath,
-                'timestamp': DateTime.now().toString().split('.')[0],
-                'explanation': explanation,
-              });
-            });
-
-            _saveHistory();
-          }
-        }
-      }
-    } catch (e, stackTrace) {
-      debugPrint('Error taking picture: $e');
-      debugPrint('Stack trace: $stackTrace');
     }
   }
 
@@ -381,7 +298,7 @@ class _HomePageState extends State<HomePage> {
         _isAnalyzing = true;
       });
 
-      final XFile? image = await _imagePicker?.pickImage(
+      final XFile? image = await _imagePicker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
         imageQuality: 80, // Reduce image size
         maxWidth: 1920, // Limit max dimensions
@@ -441,7 +358,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _controller?.dispose();
     _flutterTts.stop();
     super.dispose();
   }
@@ -570,38 +486,29 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _isAnalyzing
                         ? null
                         : () async {
-                            debugPrint('Camera button pressed');
                             if (kIsWeb) {
-                              debugPrint('Web platform - using gallery');
                               await _handleImageSelection();
                             } else {
-                              debugPrint('Mobile platform - showing options');
-                              if (!mounted) return;
-                              showModalBottomSheet<void>(
+                              showModalBottomSheet(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return SafeArea(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
+                                    child: Wrap(
                                       children: <Widget>[
                                         ListTile(
                                           leading: const Icon(Icons.camera_alt),
-                                          title:
-                                              const Text('Prendre une photo'),
-                                          onTap: () {
+                                          title: const Text('Prendre une photo'),
+                                          onTap: () async {
                                             Navigator.pop(context);
-                                            _handleImageSelection(
-                                                fromCamera: true);
+                                            await _handleImageSelection(fromCamera: true);
                                           },
                                         ),
                                         ListTile(
-                                          leading:
-                                              const Icon(Icons.photo_library),
-                                          title:
-                                              const Text('Choisir une image'),
-                                          onTap: () {
+                                          leading: const Icon(Icons.photo_library),
+                                          title: const Text('Choisir une image'),
+                                          onTap: () async {
                                             Navigator.pop(context);
-                                            _handleImageSelection();
+                                            await _handleImageSelection();
                                           },
                                         ),
                                       ],

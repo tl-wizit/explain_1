@@ -137,14 +137,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
-  file_picker:
-    dependency: "direct main"
-    description:
-      name: file_picker
-      sha256: be325344c1f3070354a1d84a231a1ba75ea85d413774ec4bdf444c023342e030
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.5.0"
   file_selector_linux:
     dependency: transitive
     description:
@@ -344,14 +336,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
-  localstorage:
-    dependency: "direct main"
-    description:
-      name: localstorage
-      sha256: e037e1db61f846e007206ef27f37d1d0cf53f9e25db5de983034803dd3356734
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.0.0"
   matcher:
     dependency: transitive
     description:
@@ -621,14 +605,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  win32:
-    dependency: transitive
-    description:
-      name: win32
-      sha256: dc6ecaa00a7c708e5b4d10ee7bec8c270e9276dfcab1783f57e9962d7884305f
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.12.0"
   xdg_directories:
     dependency: transitive
     description:
@@ -638,5 +614,5 @@ packages:
     source: hosted
     version: "1.1.0"
 sdks:
-  dart: ">=3.7.0 <4.0.0"
+  dart: ">=3.7.0-0 <4.0.0"
   flutter: ">=3.27.0"
