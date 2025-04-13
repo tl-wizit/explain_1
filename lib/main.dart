@@ -138,16 +138,22 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _takePicture() async {
     try {
+      debugPrint('Taking picture, is web: $kIsWeb');
       if (kIsWeb) {
         final picker = ImagePicker();
+        debugPrint('Opening image picker on web');
         final XFile? image =
             await picker.pickImage(source: ImageSource.gallery);
 
         if (image != null) {
+          debugPrint('Image selected, reading bytes');
           final bytes = await image.readAsBytes();
+          debugPrint('Bytes read, saving to storage');
           final storagePath = await _saveImageToStorage(image.path, bytes);
+          debugPrint('Getting explanation');
           final explanation =
               await _getExplanation('web_image', fileBytes: bytes);
+          debugPrint('Explanation received');
 
           setState(() {
             _imageHistory.add({
@@ -158,6 +164,8 @@ class _HomePageState extends State<HomePage> {
           });
 
           _saveHistory();
+        } else {
+          debugPrint('No image selected');
         }
       } else {
         // Ensure controller is initialized
@@ -194,8 +202,9 @@ class _HomePageState extends State<HomePage> {
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error taking picture: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
   }
 
@@ -494,14 +503,25 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _isAnalyzing
                         ? null
                         : () async {
+                            debugPrint(
+                                'Button pressed, analyzing: $_isAnalyzing');
                             if (kIsWeb) {
-                              // Web platform - use FilePicker
-                              final result = await FilePicker.platform
-                                  .pickFiles(type: FileType.image);
-                              if (result != null) {
-                                final bytes = result.files.single.bytes;
-                                if (bytes != null) {
-                                  log('File selected on web');
+                              try {
+                                setState(() {
+                                  _isAnalyzing =
+                                      true; // Set analyzing state before picking
+                                });
+
+                                final result =
+                                    await FilePicker.platform.pickFiles(
+                                  type: FileType.image,
+                                  withData: true, // Ensure we get the file data
+                                );
+
+                                if (result != null &&
+                                    result.files.single.bytes != null) {
+                                  debugPrint('File selected on web with bytes');
+                                  final bytes = result.files.single.bytes!;
                                   final storagePath = await _saveImageToStorage(
                                       'web_image.jpg', bytes);
                                   final explanation = await _getExplanation(
@@ -517,9 +537,19 @@ class _HomePageState extends State<HomePage> {
                                     });
                                   });
 
-                                  log('Image history updated');
-                                  _saveHistory();
+                                  debugPrint('Image history updated');
+                                  await _saveHistory();
+                                } else {
+                                  debugPrint(
+                                      'No file selected or no bytes available');
                                 }
+                              } catch (e, stackTrace) {
+                                debugPrint('Error handling file pick: $e');
+                                debugPrint('Stack trace: $stackTrace');
+                              } finally {
+                                setState(() {
+                                  _isAnalyzing = false; // Reset analyzing state
+                                });
                               }
                             } else {
                               // Mobile platform - show options
