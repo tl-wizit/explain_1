@@ -69,7 +69,8 @@ class _HomePageState extends State<HomePage> {
   bool _isSpeaking = false;
   bool _isPaused = false;
   String _currentText = '';
-  int _lastPosition = 0; // Add this to track position
+  String _currentlyPlayingText = '';
+  int _currentWordPosition = 0;
   final Map<String, Uint8List> _imageCache = {};
   final ImagePicker _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
@@ -78,6 +79,35 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadHistory();
+    _initTTS();
+  }
+
+  Future<void> _initTTS() async {
+    await _flutterTts.setLanguage('fr-FR');
+    await _flutterTts.setSpeechRate(0.9);
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.setVolume(1.0);
+
+    _flutterTts.setPauseHandler(() {
+      debugPrint('TTS Paused');
+      if (mounted) {
+        setState(() {
+          _isPaused = true;
+        });
+      }
+    });
+
+    _flutterTts.setContinueHandler(() {
+      debugPrint('TTS Continued');
+      if (mounted) {
+        setState(() {
+          _isPaused = false;
+        });
+      }
+    });
+
+    var voices = await _flutterTts.getVoices;
+    debugPrint('Available voices: $voices');
   }
 
   Future<void> _loadHistory() async {
@@ -273,57 +303,52 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _speak(String text) async {
-    if (_isSpeaking) {
-      if (_isPaused) {
-        // Resume from last position
-        setState(() {
-          _isPaused = false;
-        });
-        final words = text.split(' ');
-        final remainingText = words.skip(_lastPosition).join(' ');
-        await _flutterTts.speak(remainingText);
-      } else {
-        // Pause
-        setState(() {
-          _isPaused = true;
-          _lastPosition = _currentText.split(' ').length; // Save position
-        });
-        await _flutterTts.stop();
+    debugPrint('TTS State - Speaking: $_isSpeaking, Paused: $_isPaused');
+
+    try {
+      if (_isSpeaking) {
+        if (_isPaused) {
+          debugPrint('Resuming TTS');
+          await _flutterTts.speak(_currentText);
+        } else {
+          debugPrint('Pausing TTS');
+          await _flutterTts.pause();
+        }
+        return;
       }
-      return;
-    }
 
-    // Start new TTS
-    setState(() {
-      _isSpeaking = true;
-      _isPaused = false;
-      _currentText = text;
-      _lastPosition = 0;
-    });
+      // Start new TTS
+      debugPrint('Starting new TTS session');
+      setState(() {
+        _isSpeaking = true;
+        _isPaused = false;
+        _currentText = text;
+      });
 
-    await _flutterTts.setLanguage('fr-FR');
+      await _flutterTts.setLanguage('fr-FR');
+      await _flutterTts.setSpeechRate(0.9);
+      await _flutterTts.setPitch(1.0);
+      await _flutterTts.setVolume(1.0);
 
-    // Add progress listener
-    _flutterTts.setProgressHandler(
-        (String text, int startOffset, int endOffset, String word) {
-      _lastPosition = text.split(' ').length;
-    });
-
-    await _flutterTts.speak(text);
-
-    _flutterTts.setCompletionHandler(() {
-      if (mounted) {
-        // Check if widget is still mounted
-        setState(() {
-          if (!_isPaused) {
-            // Only reset if not paused
+      _flutterTts.setCompletionHandler(() {
+        debugPrint('TTS Completed');
+        if (mounted && !_isPaused) {
+          setState(() {
             _isSpeaking = false;
             _currentText = '';
-            _lastPosition = 0;
-          }
-        });
-      }
-    });
+          });
+        }
+      });
+
+      await _flutterTts.speak(text);
+    } catch (e) {
+      debugPrint('TTS Exception: $e');
+      setState(() {
+        _isSpeaking = false;
+        _isPaused = false;
+        _currentText = '';
+      });
+    }
   }
 
   Future<void> _handleImageSelection({bool fromCamera = false}) async {
@@ -393,10 +418,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _flutterTts.stop();
-    _currentText = '';
     _isSpeaking = false;
     _isPaused = false;
-    _lastPosition = 0;
+    _currentText = '';
     super.dispose();
   }
 
