@@ -68,7 +68,8 @@ class _HomePageState extends State<HomePage> {
   bool _isAnalyzing = false;
   bool _isSpeaking = false;
   bool _isPaused = false;
-  String _currentText = ''; // Track current TTS text
+  String _currentText = '';
+  int _lastPosition = 0; // Add this to track position
   final Map<String, Uint8List> _imageCache = {};
   final ImagePicker _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
@@ -274,18 +275,18 @@ class _HomePageState extends State<HomePage> {
   Future<void> _speak(String text) async {
     if (_isSpeaking) {
       if (_isPaused) {
-        // Resume by starting over from where we left off
+        // Resume from last position
         setState(() {
           _isPaused = false;
         });
-        final words = _currentText.split(' ');
-        final spokenWords = text.split(' ');
-        final remainingText = spokenWords.skip(words.length).join(' ');
+        final words = text.split(' ');
+        final remainingText = words.skip(_lastPosition).join(' ');
         await _flutterTts.speak(remainingText);
       } else {
-        // Pause by stopping
+        // Pause
         setState(() {
           _isPaused = true;
+          _lastPosition = _currentText.split(' ').length; // Save position
         });
         await _flutterTts.stop();
       }
@@ -297,17 +298,31 @@ class _HomePageState extends State<HomePage> {
       _isSpeaking = true;
       _isPaused = false;
       _currentText = text;
+      _lastPosition = 0;
     });
 
     await _flutterTts.setLanguage('fr-FR');
+
+    // Add progress listener
+    _flutterTts.setProgressHandler(
+        (String text, int startOffset, int endOffset, String word) {
+      _lastPosition = text.split(' ').length;
+    });
+
     await _flutterTts.speak(text);
 
     _flutterTts.setCompletionHandler(() {
-      setState(() {
-        _isSpeaking = false;
-        _isPaused = false;
-        _currentText = '';
-      });
+      if (mounted) {
+        // Check if widget is still mounted
+        setState(() {
+          if (!_isPaused) {
+            // Only reset if not paused
+            _isSpeaking = false;
+            _currentText = '';
+            _lastPosition = 0;
+          }
+        });
+      }
     });
   }
 
@@ -381,6 +396,7 @@ class _HomePageState extends State<HomePage> {
     _currentText = '';
     _isSpeaking = false;
     _isPaused = false;
+    _lastPosition = 0;
     super.dispose();
   }
 
