@@ -32,7 +32,19 @@ jobs:
       - name: Setup Environment
         run: |
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
-        
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Update Version
+        run: |
+          cd tools
+          npm install
+          npx ts-node update_version.ts
+          cd ..
+
       - name: Build web
         run: flutter build web --base-href "/explain_1/"
 

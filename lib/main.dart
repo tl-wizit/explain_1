@@ -14,6 +14,7 @@ import 'package:path/path.dart' as path;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:js/js.dart' if (dart.library.html) 'dart:js' as js;
 import 'settings_page.dart';
+import 'version.dart';
 
 void main() async {
   print(
@@ -435,7 +436,7 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Explain App [${DateTime.now().toString().split('.')[0]}]'),
+        title: Text('Explain App v${Version.number} (${Version.build})'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
