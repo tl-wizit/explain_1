@@ -67,6 +67,8 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, String>> _imageHistory = [];
   bool _isAnalyzing = false;
   bool _isSpeaking = false;
+  bool _isPaused = false;
+  String _currentText = ''; // Track current TTS text
   final Map<String, Uint8List> _imageCache = {};
   final ImagePicker _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
@@ -271,22 +273,37 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _speak(String text) async {
     if (_isSpeaking) {
-      await _flutterTts.stop();
-      setState(() {
-        _isSpeaking = false;
-      });
+      if (_isPaused) {
+        // Resume
+        setState(() {
+          _isPaused = false;
+        });
+        await _flutterTts.resume();
+      } else {
+        // Pause
+        setState(() {
+          _isPaused = true;
+        });
+        await _flutterTts.pause();
+      }
       return;
     }
 
+    // Start new TTS
     setState(() {
       _isSpeaking = true;
+      _isPaused = false;
+      _currentText = text;
     });
+
     await _flutterTts.setLanguage('fr-FR');
     await _flutterTts.speak(text);
 
     _flutterTts.setCompletionHandler(() {
       setState(() {
         _isSpeaking = false;
+        _isPaused = false;
+        _currentText = '';
       });
     });
   }
@@ -357,8 +374,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _flutterTts.stop();
+    _currentText = '';
+    _isSpeaking = false;
+    _isPaused = false;
     super.dispose();
   }
 
@@ -456,8 +475,10 @@ class _HomePageState extends State<HomePage> {
                                   children: [
                                     IconButton(
                                       icon: Icon(
-                                        _isSpeaking
-                                            ? Icons.stop
+                                        _currentText == item['explanation']!
+                                            ? (_isPaused
+                                                ? Icons.play_arrow
+                                                : Icons.pause)
                                             : Icons.volume_up,
                                         color: theme.colorScheme.primary,
                                       ),
@@ -497,15 +518,19 @@ class _HomePageState extends State<HomePage> {
                                       children: <Widget>[
                                         ListTile(
                                           leading: const Icon(Icons.camera_alt),
-                                          title: const Text('Prendre une photo'),
+                                          title:
+                                              const Text('Prendre une photo'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            await _handleImageSelection(fromCamera: true);
+                                            await _handleImageSelection(
+                                                fromCamera: true);
                                           },
                                         ),
                                         ListTile(
-                                          leading: const Icon(Icons.photo_library),
-                                          title: const Text('Choisir une image'),
+                                          leading:
+                                              const Icon(Icons.photo_library),
+                                          title:
+                                              const Text('Choisir une image'),
                                           onTap: () async {
                                             Navigator.pop(context);
                                             await _handleImageSelection();
