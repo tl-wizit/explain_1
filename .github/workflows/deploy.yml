@@ -33,12 +33,14 @@ jobs:
 
       - name: Commit version update
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add lib/version.dart
-          git commit -m "Auto-increment version number [skip ci]" || echo "No changes to commit"
-          git push
-
+          if [[ "${{ github.event.head_commit.message }}" != *"[skip-version]"* ]]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add lib/version.dart
+            git commit -m "Auto-increment version number [skip ci]" || echo "No changes to commit"
+            git push
+          fi
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
