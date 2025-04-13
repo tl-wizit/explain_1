@@ -20,7 +20,7 @@ migrate_working_dir/
 .classpath
 .project
 .settings/
-.vscode/*
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -43,6 +43,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment files
-.env*
-!.env.example
+
+# Auto-generated files
+lib/version.dart
+
+# Dependencies
+node_modules/
