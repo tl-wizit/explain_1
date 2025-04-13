@@ -72,6 +72,7 @@ class _HomePageState extends State<HomePage> {
   bool _isSpeaking = false;
   final Map<String, Uint8List> _imageCache = {};
   ImagePicker? _imagePicker;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -410,6 +411,15 @@ class _HomePageState extends State<HomePage> {
           });
         });
 
+        // Add this after setState
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+
         await _saveHistory();
         debugPrint('History saved');
       } else {
@@ -430,6 +440,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _controller?.dispose();
     _flutterTts.stop();
     super.dispose();
@@ -440,7 +451,7 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Explain App v${Version.number} (${Version.build})'),
+        title: Text('Explique-moi v${Version.number} (${Version.build})'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
@@ -469,6 +480,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       )
                     : ListView.builder(
+                        controller: _scrollController,
                         itemCount: _imageHistory.length,
                         itemBuilder: (context, index) {
                           final item = _imageHistory[index];
