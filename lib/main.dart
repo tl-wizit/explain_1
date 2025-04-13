@@ -451,7 +451,7 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Explique-moi v${Version.number} (${Version.build})'),
+        title: Text('Explique-moi... v${Version.number} (${Version.build})'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
